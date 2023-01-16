@@ -5,8 +5,8 @@ account: yangjasp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6414763
-bundleId: 6736412
+bundleId: 6737219
 url: https://yangjasp.shinyapps.io/StowdleApp/
-when: 1673808057.04874
+when: 1673827163.06881
 asMultiple: FALSE
 asStatic: FALSE

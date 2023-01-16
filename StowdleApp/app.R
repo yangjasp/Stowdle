@@ -14,6 +14,7 @@ library(dplyr)
 library(RCurl)
 library(rclipboard)
 library(shinyCopy2clipboard)
+library(shinyalert)
 
 
 # Data
@@ -28,13 +29,34 @@ data <- dplyr::arrange(data, Name)
 ui <- fluidPage(theme = shinytheme("cosmo"),
 
     # Application title
-    titlePanel("Stowdle"),
+    #titlePanel("Stowdle",
+    #           div(style = "position:absolute;right:2em;top:10px;", 
+    #               actionButton("help", "?")
+    #           )),
 
+    # App title
+    titlePanel("Stowdle"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
-        sidebarPanel(width = 9,
-            uiOutput("StreetName")
+        sidebarPanel(width = 9, # was 9
+            uiOutput("StreetName"),
+            shiny::actionButton("help", "?", 
+              style = "position: absolute; top:-35px; right: 15px; 
+                      width: 25px;
+                      height: 25px;
+                      border-radius: 15px;
+                      border: 1px solid black;
+                      color: black;
+                      background-color: white;
+                      text-align: center;
+                      font-size: 16px;
+                      padding-top: 5px;
+                      padding-right: 4px;
+                      line-height: 15px;
+                      padding-left: 5px;
+                      padding-bottom: -10px"
+              )
         ),
 
         # Show a table of Guesses
@@ -52,7 +74,7 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
            htmlOutput("answer"),
            htmlOutput("text"),
            rclipboardSetup(),
-           #textInput("text1","yes")
+           #actionButton("help", "?")
         )
     )
 )
@@ -62,6 +84,25 @@ server <- function(input, output, session) {
     
     # Null copy button to start
     output$Copy <- renderUI({NULL})
+    
+    # Help button modal
+    observeEvent(input$help, {
+      showModal(modalDialog(
+        title = "How to Play",
+        HTML("<ul>
+  <li>Guess the correct Stow, MA street name in 6 tries.</li>
+  <li>Type your own guess or select from the dropdown.</li>
+  <li>After each guess the following will appear:
+  <ul>
+  <li><strong>Distance:</strong> The distance in miles from the <strong>midpoint</strong> of the guessed  street to the <strong>midpoint</strong> of the correct street.</li>
+  <li><strong>Direction:</strong> An arrow specifying the direction of the correct street relative to the guessed street.</li>
+  <li><strong>Percent:</strong> How close the guessed street is to the correct street. <FONT COLOR=\"RED\">Red</FONT> indicates a close guess.</li>
+  </ul>
+  <li>After you have completed the Stowdle, press the copy button to share your score with friends! </li>
+</ul>"),
+        easyClose = TRUE
+      ))
+    })
     
     # Reactive Value for Street Name selection
     StreetName_reactive <- reactive({
