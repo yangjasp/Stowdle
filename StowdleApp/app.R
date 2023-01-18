@@ -19,7 +19,6 @@ library(jsonlite)
 library(purrr)
 library(shinyStore)
 library(bslib)
-library(shinyWidgets)
 
 
 # Data
