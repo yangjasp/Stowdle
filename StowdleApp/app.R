@@ -20,27 +20,24 @@ library(jsonlite)
 library(cookies)
 library(purrr)
 library(shinyStore)
+library(bslib)
+library(shinyWidgets)
 
 
 # Data
-#data <- read.csv("StowdleApp/data/StowRoads.csv")
-#data <- read.csv("/Users/jasper/Desktop/Stowdle/Stowdle/StowdleApp/data/StowRoads.csv")
-#x <- getURL("https://github.com/yangjasp/Stowdle/blob/main/StowdleApp/data/StowRoads.csv")
-#data <- read.csv(text = x)
 data <- read.csv("data/StowRoads.csv")
 data <- dplyr::arrange(data, Name)
 
-# Define UI 
-ui <- fluidPage(theme = shinytheme("cosmo"),
+# Define UI (was theme = shinytheme("cosmo"))
+ui <- fluidPage(theme = bs_theme(font_scale = 1.0, 
+                                bootswatch = "sketchy", bg = "#F5F5F5", 
+                                fg = "#000"),
 
     # Application title
-    #titlePanel("Stowdle",
-    #           div(style = "position:absolute;right:2em;top:10px;", 
-    #               actionButton("help", "?")
-    #           )),
-
-    # App title
-    titlePanel("Stowdle"),
+    
+    titlePanel(tagList(img(src = "apple.png", height = 35, width = 35),"Stowdle"
+      ),
+    windowTitle = "Stowdle"),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -68,22 +65,14 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
 
         # Show a table of Guesses
         mainPanel(width = 8,
-           #DT::dataTableOutput("previousguesses"),
            formattable::formattableOutput("table"),
            actionButton("Guess", "Guess"),
-           #actionButton("Copy", "Copy to Clipboard"),
-           #use_copy(),
-           #CopyButton("copybtn",
-                      #label = "Copy to Clipboard",
-                      #icon = icon("clipboard"),
-                      #text = "No text found"),
            uiOutput("Copy"),
            htmlOutput("answer"),
            htmlOutput("text"),
            rclipboardSetup(),
            useShinyjs(),
            initStore("store", "AppStore-Stowdle")
-           #actionButton("help", "?")
         )
     )
 )
@@ -132,8 +121,6 @@ server <- function(input, output, session) {
     copy_output <- reactiveVal(list())
     
     # Now check to see if there is a reload from the same day
-    # First, check if there is a reload of data available from same day
-    # if (is.null(cookies::get_cookie("StowdleLastDate"))) { # was StowdleLastDate
     if (!(is.null(isolate(input$store)$StowdleLastDate))){
       # Get the list from local browser storage
       user_lastdate <- isolate(input$store)$StowdleLastDate
@@ -169,29 +156,12 @@ server <- function(input, output, session) {
       guess_list <- isolate(input$store)$StowdleGuesses
       guess_list <- map(guess_list, 
                         function(x) { x$percent <- percent(x$percent); x })
-      # Convert the JSON object to a df
-      # guess_list_df <- fromJSON(guess_list_json)
-      # guess_list_df$percent <- percent(guess_list_df$percent)
-
-      # Now convert back to a list
-      #guess_list <- lapply(1:nrow(guess_list_df), function(i){
-      #  as.list(guess_list_df[i,])
-      #})
       all_guesses(guess_list)
 
 
       # And repeat for text_list
         # Get the list from cookies
       text_list <- isolate(input$store)$StowdleText
-      # test_text_list <<- text_list
-        # Convert the JSON object to a df
-      #text_list_df <- fromJSON(text_list_json)
-      #text_list_df$percent <- percent(text_list_df$percent)
-
-        # Now convert back to a list
-     # text_list <- lapply(1:nrow(text_list_df), function(i){
-     #   as.list(text_list_df[i,])
-     # })
       copy_output(text_list)
 
       # And if the user was already finished
@@ -353,19 +323,6 @@ server <- function(input, output, session) {
         copy_output_new[[length(copy_output_new) + 1]] <- copy_evaluation
         copy_output(copy_output_new)
         
-        
-        # function to turn list into df
-       # make_df <- function(list){
-            
-        #}
-        
-        #output$previousguesses <- DT::renderDataTable({
-        #    output_df <- dplyr::bind_rows(all_guesses())
-        #    names(output_df) <- c("Guess", "Distance", "Direction","Win")
-        #    output_df <- output_df[,1:3]
-        #    output_df
-        #})
-        
         output_df <- dplyr::bind_rows(all_guesses()) %>%
             dplyr::mutate(direction = case_when(
                 direction == "east" ~ "&#x27A1;",
@@ -401,11 +358,6 @@ server <- function(input, output, session) {
         
         if (finished() == TRUE){
           
-          # Workaround for execution within RStudio version < 1.2
-          #if (interactive()){
-          #    observeEvent(input$clipbtn, clipr::write_clip(input$text))
-          #}
-          
           fraction <- paste0(length(copy_output()),"/6")
           fraction <- ifelse(StreetName_reactive() == answer, fraction,
                              "X/6")
@@ -416,7 +368,6 @@ server <- function(input, output, session) {
                               paste(lapply(copy_output(), paste,
                                            collapse = ""), 
                                     collapse = "<br/>"), sep = "")
-          #textoutput_test <- "test"
           
           textoutput_tocopy <- paste(paste("Stowdle", 
                                            as.numeric(Sys.Date()) - 19143, 
@@ -466,14 +417,10 @@ server <- function(input, output, session) {
                                   origin = "1970-01-01"), finished())
       user_lastdate_json <- toJSON(user_lastdate)
 
-      # Set the json files as cookies
-      #set_cookie("StowdleProgress", user_progress_json) 
+      # Store the json files 
       updateStore(session, "StowdleProgress", user_progress_json)
-      #set_cookie("StowdleGuesses", guess_list_json)
       updateStore(session, "StowdleGuesses", guess_list_json)
-      #set_cookie("StowdleText", text_list_json)
       updateStore(session, "StowdleText", text_list_json)
-      #set_cookie("StowdleLastDate", user_lastdate_json)
       updateStore(session, "StowdleLastDate", user_lastdate_json)
     })
             
