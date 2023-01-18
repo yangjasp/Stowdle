@@ -15,6 +15,11 @@ library(RCurl)
 library(rclipboard)
 library(shinyCopy2clipboard)
 library(shinyalert)
+library(shinyjs)
+library(jsonlite)
+library(cookies)
+library(purrr)
+library(shinyStore)
 
 
 # Data
@@ -58,6 +63,8 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
                       padding-bottom: -10px"
               )
         ),
+        
+        
 
         # Show a table of Guesses
         mainPanel(width = 8,
@@ -74,6 +81,8 @@ ui <- fluidPage(theme = shinytheme("cosmo"),
            htmlOutput("answer"),
            htmlOutput("text"),
            rclipboardSetup(),
+           useShinyjs(),
+           initStore("store", "AppStore-Stowdle")
            #actionButton("help", "?")
         )
     )
@@ -104,6 +113,7 @@ server <- function(input, output, session) {
       ))
     })
     
+    
     # Reactive Value for Street Name selection
     StreetName_reactive <- reactive({
         input$StreetName
@@ -120,6 +130,116 @@ server <- function(input, output, session) {
     finished <- reactiveVal(FALSE)
     all_guesses <- reactiveVal(list())
     copy_output <- reactiveVal(list())
+    
+    # Now check to see if there is a reload from the same day
+    # First, check if there is a reload of data available from same day
+    # if (is.null(cookies::get_cookie("StowdleLastDate"))) { # was StowdleLastDate
+    if (!(is.null(isolate(input$store)$StowdleLastDate))){
+      # Get the list from local browser storage
+      user_lastdate <- isolate(input$store)$StowdleLastDate
+
+      if (user_lastdate[1] ==
+          as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
+        progress <- isolate(input$store)$StowdleProgress
+        output_df <- do.call(rbind.data.frame, progress)
+        rownames(output_df) <- seq_len(nrow(output_df))
+        output_df$Percent <- percent(output_df$Percent)
+        # Repopulate table of guesses
+        ## Function for percent
+        customRange = c(0, 1.001) # custom min / max values
+        colors      = csscolor(gradient(as.numeric(c(customRange,
+                                                     output_df$Percent)), "#FFFEE9", "#980101"))
+        colors      = colors[-(1:2)] ## remove colors for min/max
+
+        fmt    = formatter("span",
+                           style = function(x){
+                             style(display            = "block",
+                                   padding            = "0 4px",
+                                   `border-radius`    = "4px",
+                                   `background-color` = ifelse(output_df$Percent == percent(1),"#007500",colors)
+                             )})
+
+        output$table <- renderFormattable({formattable(output_df,
+                                                       list(`Percent` = fmt))})
+      }
+      # test_output_df <<- output_df
+      # And now repopulate guesses list. Need to read from cookie and reconvert
+      # to a list
+      # Get the list from stored data
+      guess_list <- isolate(input$store)$StowdleGuesses
+      guess_list <- map(guess_list, 
+                        function(x) { x$percent <- percent(x$percent); x })
+      # Convert the JSON object to a df
+      # guess_list_df <- fromJSON(guess_list_json)
+      # guess_list_df$percent <- percent(guess_list_df$percent)
+
+      # Now convert back to a list
+      #guess_list <- lapply(1:nrow(guess_list_df), function(i){
+      #  as.list(guess_list_df[i,])
+      #})
+      all_guesses(guess_list)
+
+
+      # And repeat for text_list
+        # Get the list from cookies
+      text_list <- isolate(input$store)$StowdleText
+      # test_text_list <<- text_list
+        # Convert the JSON object to a df
+      #text_list_df <- fromJSON(text_list_json)
+      #text_list_df$percent <- percent(text_list_df$percent)
+
+        # Now convert back to a list
+     # text_list <- lapply(1:nrow(text_list_df), function(i){
+     #   as.list(text_list_df[i,])
+     # })
+      copy_output(text_list)
+
+      # And if the user was already finished
+      if (user_lastdate[2] == TRUE){
+        finished(TRUE) #set finished to true
+        fraction <- paste0(length(text_list),"/6")
+        fraction <- ifelse(guess_list[[length(guess_list)]][1] == answer, fraction,
+                           "X/6")
+
+        textoutput <- paste(paste("Stowdle",
+                                  as.numeric(Sys.Date()) - 19143,
+                                  fraction, "<br/>"),
+                            paste(lapply(text_list, paste,
+                                         collapse = ""),
+                                  collapse = "<br/>"), sep = "")
+        textoutput_test <- "test"
+
+        textoutput_tocopy <- paste(paste("Stowdle",
+                                         as.numeric(Sys.Date()) - 19143,
+                                         fraction, "\n"),
+                                   paste(lapply(text_list, paste,
+                                                collapse = ""),
+                                         collapse = "\n"),
+                                   "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
+                                   sep = "")
+
+        output$text<-renderText({
+          textoutput
+        })
+        if(!(guess_list[[length(guess_list)]][1]  == answer)){
+          output$answer<-renderText({
+           paste("Answer:", answer , collapse = "<br/>")
+         })
+
+        }
+
+        output$Copy <- renderUI({
+          rclipButton(
+            inputId = "clipbtn",
+            label = "Copy to Clipboard",
+            clipText = textoutput_tocopy,
+            icon = icon("clipboard")
+          )
+        })
+
+      }
+      }
+
     
     # Add choices for street name
     output$StreetName <- renderUI({
@@ -278,89 +398,100 @@ server <- function(input, output, session) {
         
         output$table <- renderFormattable({formattable(output_df,
                                                        list(`Percent` = fmt))})
-        }
         
         if (finished() == TRUE){
-        
-            # Workaround for execution within RStudio version < 1.2
-            #if (interactive()){
-            #    observeEvent(input$clipbtn, clipr::write_clip(input$text))
-            #}
-            
-            fraction <- paste0(length(copy_output()),"/6")
-            fraction <- ifelse(StreetName_reactive() == answer, fraction,
-                               "X/6")
-            
-            textoutput <- paste(paste("Stowdle", 
-                                      as.numeric(Sys.Date()) - 19143, 
-                                      fraction, "<br/>"), 
-                                paste(lapply(copy_output(), paste,
-                                             collapse = ""), 
-                                      collapse = "<br/>"), sep = "")
-            #textoutput_test <- "test"
-            
-            textoutput_tocopy <- paste(paste("Stowdle", 
-                                      as.numeric(Sys.Date()) - 19143, 
-                                      fraction, "\n"), 
-                                paste(lapply(copy_output(), paste,
-                                             collapse = ""), 
-                                      collapse = "\n"), 
-                                "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
-                                sep = "")
-            
-            output$text<-renderText({
-                textoutput
-            })
-            if(!(StreetName_reactive() == answer)){
-                output$answer<-renderText({
-                    paste("Answer:", answer , collapse = "<br/>")
-                })
-                
-            }
-            
           
-            
-            # Rclipbutton attempt
-            
-        
-            
-            #if (interactive()){
-            #    observeEvent(input$clipbtn, clipr::write_clip(textoutput))
-            #}  
-            
-            # Other clip button attempt
-            
-            #observe({
-              
-            #  req(input$copybtn)
-            #  CopyButtonUpdate(session,
-            #                   id = "copybtn",
-            #                   label = "Copy to Clipboard",
-            #                   icon = icon("clipboard"),
-            #                   text = textoutput
-            #  )
-            #})
-            
-            output$Copy <- renderUI({
-              output$Copy <- renderUI({
-                rclipButton(
-                  inputId = "clipbtn",
-                  label = "Copy to Clipboard",
-                  clipText = textoutput_tocopy, 
-                  icon = icon("clipboard")
-                )
-              })
+          # Workaround for execution within RStudio version < 1.2
+          #if (interactive()){
+          #    observeEvent(input$clipbtn, clipr::write_clip(input$text))
+          #}
+          
+          fraction <- paste0(length(copy_output()),"/6")
+          fraction <- ifelse(StreetName_reactive() == answer, fraction,
+                             "X/6")
+          
+          textoutput <- paste(paste("Stowdle", 
+                                    as.numeric(Sys.Date()) - 19143, 
+                                    fraction, "<br/>"), 
+                              paste(lapply(copy_output(), paste,
+                                           collapse = ""), 
+                                    collapse = "<br/>"), sep = "")
+          #textoutput_test <- "test"
+          
+          textoutput_tocopy <- paste(paste("Stowdle", 
+                                           as.numeric(Sys.Date()) - 19143, 
+                                           fraction, "\n"), 
+                                     paste(lapply(copy_output(), paste,
+                                                  collapse = ""), 
+                                           collapse = "\n"), 
+                                     "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
+                                     sep = "")
+          
+          output$text<-renderText({
+            textoutput
+          })
+          if(!(StreetName_reactive() == answer)){
+            output$answer<-renderText({
+              paste("Answer:", answer , collapse = "<br/>")
             })
             
+          }
+          
+          output$Copy <- renderUI({
+            output$Copy <- renderUI({
+              rclipButton(
+                inputId = "clipbtn",
+                label = "Copy to Clipboard",
+                clipText = textoutput_tocopy, 
+                icon = icon("clipboard")
+              )
+              
+            })
+          })
         }
         
-       # if (finished() == FALSE){
-            
-       # }
+        }
+        
       
-      
-      
+      # Now add code to store guesses in a df and reload upon re-opening app
+      # Add a row to output_df specifying the day of last save
+      progress <- output_df
+      user_progress_json <- toJSON(progress)
+      guess_list <- all_guesses()
+      guess_list_json <- toJSON(guess_list)
+      text_list <- copy_output()
+      text_list_json <- toJSON(text_list)
+
+      user_lastdate <- c(as.numeric(as.Date(substr(Sys.time(), 1, 10)),
+                                  origin = "1970-01-01"), finished())
+      user_lastdate_json <- toJSON(user_lastdate)
+
+      # Set the json files as cookies
+      #set_cookie("StowdleProgress", user_progress_json) 
+      updateStore(session, "StowdleProgress", user_progress_json)
+      #set_cookie("StowdleGuesses", guess_list_json)
+      updateStore(session, "StowdleGuesses", guess_list_json)
+      #set_cookie("StowdleText", text_list_json)
+      updateStore(session, "StowdleText", text_list_json)
+      #set_cookie("StowdleLastDate", user_lastdate_json)
+      updateStore(session, "StowdleLastDate", user_lastdate_json)
     })
+            
+    observeEvent(input$clipbtn, {
+      # Code to execute when button is pressed
+        shinyjs::runjs(
+          "document.getElementById('clipbtn').style.backgroundColor = 'gray';
+           document.getElementById('clipbtn').innerHTML = 'Copied!';"
+         )
+          shinyjs::html("copy_message", "Text copied to clipboard!")
+          shinyjs::show("copy_message")
+          Sys.sleep(1)
+          shinyjs::hide("copy_message")
+          shinyjs::runjs(
+            "document.getElementById('clipbtn').style.backgroundColor = 'black';
+            document.getElementById('clipbtn').innerHTML = 'Copy to Clipboard';"
+          )
+        })
 
 }
 
