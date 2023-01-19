@@ -396,27 +396,25 @@ server <- function(input, output, session) {
           })
         }
         
-        }
-        
-      
-      # Now add code to store guesses in a df and reload upon re-opening app
-      # Add a row to output_df specifying the day of last save
-      progress <- output_df
-      user_progress_json <- toJSON(progress)
-      guess_list <- all_guesses()
-      guess_list_json <- toJSON(guess_list)
-      text_list <- copy_output()
-      text_list_json <- toJSON(text_list)
+        # Now add code to store guesses in a df and reload upon re-opening app
+        # Add a row to output_df specifying the day of last save
+        progress <- output_df
+        user_progress_json <- toJSON(progress)
+        guess_list <- all_guesses()
+        guess_list_json <- toJSON(guess_list)
+        text_list <- copy_output()
+        text_list_json <- toJSON(text_list)
 
-      user_lastdate <- c(as.numeric(as.Date(substr(Sys.time(), 1, 10)),
+        user_lastdate <- c(as.numeric(as.Date(substr(Sys.time(), 1, 10)),
                                   origin = "1970-01-01"), finished())
-      user_lastdate_json <- toJSON(user_lastdate)
+        user_lastdate_json <- toJSON(user_lastdate)
 
-      # Store the json files 
-      updateStore(session, "StowdleProgress", user_progress_json)
-      updateStore(session, "StowdleGuesses", guess_list_json)
-      updateStore(session, "StowdleText", text_list_json)
-      updateStore(session, "StowdleLastDate", user_lastdate_json)
+        # Store the json files 
+        updateStore(session, "StowdleProgress", user_progress_json)
+        updateStore(session, "StowdleGuesses", guess_list_json)
+        updateStore(session, "StowdleText", text_list_json)
+        updateStore(session, "StowdleLastDate", user_lastdate_json)
+        }
     })
             
     observeEvent(input$clipbtn, {
