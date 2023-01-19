@@ -5,9 +5,9 @@ account: yangjasp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 6414763
-bundleId: 6747102
+bundleId: 6747522
 url: https://yangjasp.shinyapps.io/StowdleApp/
-when: 1674044489.10675
+when: 1674052011.1264
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: guess_list.Rdata|text_list.Rdata|user_lastdate|user_lastdate.Rdata|user_progress.Rdata|data/.DS_Store

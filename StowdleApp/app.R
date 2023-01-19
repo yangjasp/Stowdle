@@ -118,24 +118,23 @@ server <- function(input, output, session) {
     copy_output <- reactiveVal(list())
     
     # Now check to see if there is a reload from the same day
-    if (!(is.null(isolate(input$store)$StowdleLastDate))){
+    if (!(is.null(isolate(input$store)$StowdleLastDate)) &
+        isolate(input$store)$StowdleLastDate[1] == 
+        as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
       # Get the list from local browser storage
       user_lastdate <- isolate(input$store)$StowdleLastDate
+      progress <- isolate(input$store)$StowdleProgress
+      output_df <- do.call(rbind.data.frame, progress)
+      rownames(output_df) <- seq_len(nrow(output_df))
+      output_df$Percent <- percent(output_df$Percent)
+      # Repopulate table of guesses
+      ## Function for percent
+      customRange = c(0, 1.001) # custom min / max values
+      colors      = csscolor(gradient(as.numeric(c(customRange,
+                                                    output_df$Percent)), "#FFFEE9", "#980101"))
+      colors      = colors[-(1:2)] ## remove colors for min/max
 
-      if (user_lastdate[1] ==
-          as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
-        progress <- isolate(input$store)$StowdleProgress
-        output_df <- do.call(rbind.data.frame, progress)
-        rownames(output_df) <- seq_len(nrow(output_df))
-        output_df$Percent <- percent(output_df$Percent)
-        # Repopulate table of guesses
-        ## Function for percent
-        customRange = c(0, 1.001) # custom min / max values
-        colors      = csscolor(gradient(as.numeric(c(customRange,
-                                                     output_df$Percent)), "#FFFEE9", "#980101"))
-        colors      = colors[-(1:2)] ## remove colors for min/max
-
-        fmt    = formatter("span",
+      fmt    = formatter("span",
                            style = function(x){
                              style(display            = "block",
                                    padding            = "0 4px",
@@ -143,9 +142,8 @@ server <- function(input, output, session) {
                                    `background-color` = ifelse(output_df$Percent == percent(1),"#007500",colors)
                              )})
 
-        output$table <- renderFormattable({formattable(output_df,
+      output$table <- renderFormattable({formattable(output_df,
                                                        list(`Percent` = fmt))})
-      }
       # test_output_df <<- output_df
       # And now repopulate guesses list. Need to read from cookie and reconvert
       # to a list
