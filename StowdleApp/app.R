@@ -118,9 +118,9 @@ server <- function(input, output, session) {
     copy_output <- reactiveVal(list())
     
     # Now check to see if there is a reload from the same day
-    if (!(is.null(isolate(input$store)$StowdleLastDate)) &
-        isolate(input$store)$StowdleLastDate[1] == 
-        as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
+    if (!(is.null(isolate(input$store)$StowdleLastDate))){
+      if(isolate(input$store)$StowdleLastDate[1] == 
+          as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
       # Get the list from local browser storage
       user_lastdate <- isolate(input$store)$StowdleLastDate
       progress <- isolate(input$store)$StowdleProgress
@@ -204,7 +204,7 @@ server <- function(input, output, session) {
 
       }
       }
-
+    }
     
     # Add choices for street name
     output$StreetName <- renderUI({
