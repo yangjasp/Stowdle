@@ -35,6 +35,12 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
     titlePanel(tagList(img(src = "apple.png", height = 35, width = 35),"Stowdle"
       ),
     windowTitle = "Stowdle"),
+    
+    # Add image for html thumbnail
+      tags$head(
+        tags$meta(property = "og:image", content = "logo.png"),
+        tags$meta(property = "twitter:image", content = "logo.png")
+      ),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
