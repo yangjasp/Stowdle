@@ -376,7 +376,7 @@ server <- function(input, output, session) {
                                      paste(lapply(copy_output(), paste,
                                                   collapse = ""), 
                                            collapse = "\n"), 
-                                     "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
+                                     "\nhttps://stowdle.app",
                                      sep = "")
           
           output$text<-renderText({
