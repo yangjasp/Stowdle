@@ -225,7 +225,7 @@ server <- function(input, output, session) {
             label = "Share",
             clipText = textoutput_tocopy,
             style = "background-color: #ffc40c;
-                color #000000; display:center-align;
+                color: #000000; display:center-align;
                   text-align: center;", 
             width = '100%'
           )
@@ -446,7 +446,7 @@ server <- function(input, output, session) {
                 label = "Share",
                 clipText = textoutput_tocopy,
                 style = "background-color: #ffc40c;
-                color #000000; display:center-align;
+                color: #000000; display:center-align;
                   text-align: center;", 
                 width = '100%'
               )
