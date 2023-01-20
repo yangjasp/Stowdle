@@ -41,6 +41,21 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
         tags$meta(property = "og:image", content = "logo.png"),
         tags$meta(property = "twitter:image", content = "logo.png")
       ),
+    
+    # Add css for notification if you win
+    tags$head(
+      tags$style(
+        HTML(".shiny-notification {
+             position:fixed;
+             top: 0px;
+             left: calc(50% - 250px);
+             width: 500px; 
+             text-align: center;
+             }
+             "
+        )
+      )
+    ),
 
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
@@ -67,9 +82,10 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
         
 
         # Show a table of Guesses
-        mainPanel(width = 8,
+        mainPanel(width = 9,
            formattable::formattableOutput("table"),
-           actionButton("Guess", "Guess"),
+           actionButton("Guess", "Guess",
+                        style = "width: 100px"),
            uiOutput("Copy"),
            htmlOutput("answer"),
            htmlOutput("text"),
@@ -99,7 +115,7 @@ server <- function(input, output, session) {
   <li><strong>Direction:</strong> An arrow specifying the direction of the correct street relative to the guessed street.</li>
   <li><strong>Percent:</strong> How close the guessed street is to the correct street. <FONT COLOR=\"RED\">Red</FONT> indicates a close guess.</li>
   </ul>
-  <li>After you have completed the Stowdle, press the copy button to share your score with friends! </li>
+  <li>After you have completed the Stowdle, press the share button to copy your score and share with friends! </li>
 </ul>"),
         easyClose = TRUE
       ))
@@ -125,7 +141,7 @@ server <- function(input, output, session) {
     
     # Now check to see if there is a reload from the same day
     if (!(is.null(isolate(input$store)$StowdleLastDate))){
-      if(isolate(input$store)$StowdleLastDate[1] == 
+      if(isolate(input$store)$StowdleLastDate[1] ==
           as.numeric(as.Date(substr(Sys.time(), 1, 10)), origin = "1970-01-01")){
       # Get the list from local browser storage
       user_lastdate <- isolate(input$store)$StowdleLastDate
@@ -155,7 +171,7 @@ server <- function(input, output, session) {
       # to a list
       # Get the list from stored data
       guess_list <- isolate(input$store)$StowdleGuesses
-      guess_list <- map(guess_list, 
+      guess_list <- map(guess_list,
                         function(x) { x$percent <- percent(x$percent); x })
       all_guesses(guess_list)
 
@@ -168,6 +184,7 @@ server <- function(input, output, session) {
       # And if the user was already finished
       if (user_lastdate[2] == TRUE){
         finished(TRUE) #set finished to true
+        shinyjs::hide("Guess") # remove guess button
         fraction <- paste0(length(text_list),"/6")
         fraction <- ifelse(guess_list[[length(guess_list)]][1] == answer, fraction,
                            "X/6")
@@ -189,22 +206,28 @@ server <- function(input, output, session) {
                                    "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
                                    sep = "")
 
-        output$text<-renderText({
-          textoutput
-        })
-        if(!(guess_list[[length(guess_list)]][1]  == answer)){
-          output$answer<-renderText({
-           paste("Answer:", answer , collapse = "<br/>")
-         })
 
-        }
+        # No longer render text on screen for now
+        # output$text<-renderText({
+        #  textoutput
+        #})
+        #if(!(guess_list[[length(guess_list)]][1]  == answer)){
+        #  output$answer<-renderText({
+        #   paste("Answer:", answer , collapse = "<br/>")
+        # })
+
+        #}
+
 
         output$Copy <- renderUI({
           rclipButton(
             inputId = "clipbtn",
-            label = "Copy to Clipboard",
+            label = "Share",
             clipText = textoutput_tocopy,
-            icon = icon("clipboard")
+            style = "background-color: #ffc40c;
+                color #000000; display:center-align;
+                  text-align: center;", 
+            width = '100%'
           )
         })
 
@@ -216,7 +239,8 @@ server <- function(input, output, session) {
     output$StreetName <- renderUI({
         selectInput(inputId = "StreetName",
                     label = "Street Name",
-                    choices = data$Name)
+                    choices = c("", data$Name),
+                    selected = NULL)
     })
     
     # Function to evaluate guess, generate info
@@ -310,6 +334,17 @@ server <- function(input, output, session) {
     # When "Guess" is pressed, calculate the values
    
     observeEvent(input$Guess, {
+      # add one more if so default selection can be ""
+      if (nchar(input$StreetName) == 0){
+        showNotification(
+          "Type or select a road in the box",
+          duration = 3, 
+          type = "default"
+        )
+      }
+      
+      else{
+      
         if(length(all_guesses()) < 6 & finished() == FALSE){
         finished(ifelse(StreetName_reactive() == answer |
                             length(all_guesses()) == 5, TRUE, FALSE))
@@ -358,7 +393,20 @@ server <- function(input, output, session) {
                                                        list(`Percent` = fmt))})
         
         if (finished() == TRUE){
-          
+          if(StreetName_reactive() == answer){
+            showNotification(
+              "You got it!",
+              duration = 3, 
+              type = "warning"
+            )
+          } else{
+            showNotification(
+              "Better luck next time!",
+              duration = 3, 
+              type = "error"
+            )
+          }
+          shinyjs::hide("Guess")
           fraction <- paste0(length(copy_output()),"/6")
           fraction <- ifelse(StreetName_reactive() == answer, fraction,
                              "X/6")
@@ -379,9 +427,11 @@ server <- function(input, output, session) {
                                      "\nhttps://stowdle.app",
                                      sep = "")
           
-          output$text<-renderText({
-            textoutput
-          })
+          # No longer render text for now
+          
+          #output$text<-renderText({
+          #  textoutput
+          #})
           if(!(StreetName_reactive() == answer)){
             output$answer<-renderText({
               paste("Answer:", answer , collapse = "<br/>")
@@ -393,14 +443,18 @@ server <- function(input, output, session) {
             output$Copy <- renderUI({
               rclipButton(
                 inputId = "clipbtn",
-                label = "Copy to Clipboard",
-                clipText = textoutput_tocopy, 
-                icon = icon("clipboard")
+                label = "Share",
+                clipText = textoutput_tocopy,
+                style = "background-color: #ffc40c;
+                color #000000; display:center-align;
+                  text-align: center;", 
+                width = '100%'
               )
               
             })
           })
         }
+        
         
         # Now add code to store guesses in a df and reload upon re-opening app
         # Add a row to output_df specifying the day of last save
@@ -421,21 +475,22 @@ server <- function(input, output, session) {
         updateStore(session, "StowdleText", text_list_json)
         updateStore(session, "StowdleLastDate", user_lastdate_json)
         }
+    }
     })
             
     observeEvent(input$clipbtn, {
       # Code to execute when button is pressed
         shinyjs::runjs(
           "document.getElementById('clipbtn').style.backgroundColor = 'gray';
-           document.getElementById('clipbtn').innerHTML = 'Copied!';"
+           document.getElementById('clipbtn').innerHTML = 'Copied to clipboard!';"
          )
-          shinyjs::html("copy_message", "Text copied to clipboard!")
+          shinyjs::html("copy_message", "T copied to clipboard!")
           shinyjs::show("copy_message")
-          Sys.sleep(1)
+          Sys.sleep(2)
           shinyjs::hide("copy_message")
           shinyjs::runjs(
-            "document.getElementById('clipbtn').style.backgroundColor = 'black';
-            document.getElementById('clipbtn').innerHTML = 'Copy to Clipboard';"
+            "document.getElementById('clipbtn').style.backgroundColor = '#ffc40c';
+            document.getElementById('clipbtn').innerHTML = 'Share';"
           )
         })
 
