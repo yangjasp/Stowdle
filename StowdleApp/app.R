@@ -481,7 +481,7 @@ server <- function(input, output, session) {
     observeEvent(input$clipbtn, {
       # Code to execute when button is pressed
         shinyjs::runjs(
-          "document.getElementById('clipbtn').style.backgroundColor = 'gray';
+          "document.getElementById('clipbtn').style.backgroundColor = '#f0ecec';
            document.getElementById('clipbtn').innerHTML = 'Copied to clipboard!';"
          )
           shinyjs::html("copy_message", "T copied to clipboard!")
