@@ -116,6 +116,7 @@ server <- function(input, output, session) {
   <li><strong>Percent:</strong> How close the guessed street is to the correct street. <FONT COLOR=\"RED\">Red</FONT> indicates a close guess.</li>
   </ul>
   <li>After you have completed the Stowdle, press the share button to copy your score and share with friends! </li>
+  <li>The Stowdle answer changes daily at 0:00 GMT.
 </ul>"),
         easyClose = TRUE
       ))
