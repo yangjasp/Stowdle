@@ -278,49 +278,6 @@ server <- function(input, output, session) {
     
     # Add button for stats
     observeEvent(input$stats, {
-      # Clean data for plot and create plot only if nrow user_stats > 0
-      if(nrow(user_stats_reactive$user_stats) > 0){
-        user_stats_sum <- user_stats_reactive$user_stats %>%
-          dplyr::filter(win == 1) %>%
-          dplyr::group_by(guesses)%>%
-          dplyr::summarise(n_guesses = n())
-      
-      user_stats_sum <- bind_rows(user_stats_sum, dplyr::filter(
-        data.frame("guesses" = 1:6,"n_guesses" = rep(0, times = 6)),
-        !(guesses %in% user_stats_sum$guesses))) %>%
-        dplyr::arrange(guesses)
-      
-      # Determine how far out the 0 columns should go
-        # For now do 1/10th of the maximum column or 1/2 of the 
-        # smalles non-zero column (so that 0 bars are never longer than
-        # non -zero ones)
-      distance <- ifelse(max(user_stats_sum$n_guesses)/10 > 
-                           min(user_stats_sum[user_stats_sum$n_guesses > 0,]$n_guesses),
-                         min(user_stats_sum[user_stats_sum$n_guesses > 0,]$n_guesses)/2,
-                         max(user_stats_sum$n_guesses)/10
-                         )
-      user_stats_sum <- user_stats_sum %>%
-        dplyr::mutate(distance = ifelse(n_guesses == 0, distance, n_guesses))
-      
-      # Make plot
-      p1 <- ggplot(data = user_stats_sum, aes(x = guesses, y = n_guesses)) +
-        geom_col(aes(x = guesses, y = distance), fill = "#ffc40c", width = 0.7) +
-        geom_text(aes(x = guesses, y = distance, 
-                      label = n_guesses),
-                  hjust = 2, vjust = 0.5, size = 5,
-                  family = "Helvetica Bold") +
-        scale_x_reverse(limits = c(6.5, 0.5), breaks = 6:1) +
-        theme_void(base_family = "Helvetica Bold") +
-        theme(axis.text.y = element_text(size = 20),
-              plot.background = element_rect(fill = "#F5F5F5",
-                                             color = "#F5F5F5",
-                                             linetype = NULL)) +
-        #geom_hline(yintercept = 0, linetype = "solid", color = "black")+
-        coord_flip() 
-      }else{
-        p1 <- NULL
-      }
-      
       # Calculate played, win, current streak, max streak
       played <- nrow(user_stats_reactive$user_stats)
       win_perc <- ifelse(nrow(user_stats_reactive$user_stats) > 0,
@@ -341,6 +298,51 @@ server <- function(input, output, session) {
         max_streak <- 0
         
       }
+      
+      # Clean data for plot and create plot only if max_streak > 0
+      # which means there is at least 1 win
+      if(max_streak > 0){
+        user_stats_sum <- user_stats_reactive$user_stats %>%
+          dplyr::filter(win == 1) %>%
+          dplyr::group_by(guesses)%>%
+          dplyr::summarise(n_guesses = n())
+        
+        user_stats_sum <- bind_rows(user_stats_sum, dplyr::filter(
+          data.frame("guesses" = 1:6,"n_guesses" = rep(0, times = 6)),
+          !(guesses %in% user_stats_sum$guesses))) %>%
+          dplyr::arrange(guesses)
+        
+        # Determine how far out the 0 columns should go
+        # For now do 1/10th of the maximum column or 1/2 of the 
+        # smalles non-zero column (so that 0 bars are never longer than
+        # non -zero ones)
+        distance <- ifelse(max(user_stats_sum$n_guesses)/10 >= 
+                             min(user_stats_sum[user_stats_sum$n_guesses > 0,]$n_guesses),
+                           min(user_stats_sum[user_stats_sum$n_guesses > 0,]$n_guesses)/2,
+                           max(user_stats_sum$n_guesses)/10
+        )
+        user_stats_sum <- user_stats_sum %>%
+          dplyr::mutate(distance = ifelse(n_guesses == 0, distance, n_guesses))
+        
+        # Make plot
+        p1 <- ggplot(data = user_stats_sum, aes(x = guesses, y = n_guesses)) +
+          geom_col(aes(x = guesses, y = distance), fill = "#ffc40c", width = 0.7) +
+          geom_text(aes(x = guesses, y = distance, 
+                        label = n_guesses),
+                    hjust = 2, vjust = 0.5, size = 5,
+                    family = "Helvetica Bold") +
+          scale_x_reverse(limits = c(6.5, 0.5), breaks = 6:1) +
+          theme_void(base_family = "Helvetica Bold") +
+          theme(axis.text.y = element_text(size = 20),
+                plot.background = element_rect(fill = "#F5F5F5",
+                                               color = "#F5F5F5",
+                                               linetype = NULL)) +
+          #geom_hline(yintercept = 0, linetype = "solid", color = "black")+
+          coord_flip() 
+      }else{
+        p1 <- NULL
+      }
+      
       
       showModal(
         modalDialog(
