@@ -52,7 +52,11 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
              left: calc(50% - 250px);
              width: 500px; 
              text-align: center;
-             }
+        }
+         .shiny-plot-output {
+           border: none;
+         }
+        
              "
         )
       )
