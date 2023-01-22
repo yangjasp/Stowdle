@@ -275,9 +275,11 @@ server <- function(input, output, session) {
     
     # Add button for stats
     observeEvent(input$stats, {
+      user_stats <- isolate(user_stats)
       # Clean data for plot and create plot only if nrow user_stats > 0
       if(nrow(user_stats) > 0){
       user_stats_sum <- user_stats %>%
+        dplyr::filter(win == 1) %>%
         dplyr::group_by(guesses)%>%
         dplyr::summarise(n_guesses = n())
       
@@ -307,7 +309,7 @@ server <- function(input, output, session) {
       # Calculate played, win, current streak, max streak
       played <- nrow(user_stats)
       win_perc <- ifelse(nrow(user_stats) > 0,
-                         sprintf("%.0f",(sum((user_stats$win)/user_stats$played)*100)),
+                         sprintf("%.0f",(sum(user_stats$win)/played)*100),
         0)
       
       # Use rle to find winning streaks, then take current and max
@@ -327,17 +329,25 @@ server <- function(input, output, session) {
       
       showModal(
         modalDialog(
+          if(max_streak > 0){
           div(style = "text-align:center; font-size: 20px",
               fluidRow(
                 column(width = 3, p(as.character(played)), p("Played")),
                 column(width = 3, p(win_perc), p("Win %")),
                 column(width = 3, p(current_streak), p("Current Streak")),
                 column(width = 3, p(max_streak), p("Max Streak"))
-              )),
-          if(nrow(user_stats) > 0){
-            renderText({"Guess Distribution"})
-            renderPlot({p1})
-            }
+              ), fluidRow(
+                column(width = 12, p("Guess Distribution"))),
+          renderPlot({p1}))
+          } else{
+            div(style = "text-align:center; font-size: 20px",
+                fluidRow(
+                  column(width = 3, p(as.character(played)), p("Played")),
+                  column(width = 3, p(win_perc), p("Win %")),
+                  column(width = 3, p(current_streak), p("Current Streak")),
+                  column(width = 3, p(max_streak), p("Max Streak"))
+                ))
+          }
         )
       )
     })
@@ -562,6 +572,7 @@ server <- function(input, output, session) {
                                             newrow_win))
           names(user_stats) <- c("num", "guesses", "win")
           updateStore(session, "StowdleStats", user_stats)
+          print(user_stats)
                                    
         }
         
