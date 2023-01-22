@@ -333,20 +333,20 @@ server <- function(input, output, session) {
           if(max_streak > 0){
           div(style = "text-align:center; font-size: 20px",
               fluidRow(
-                column(width = 3, p(as.character(played)), p("Played")),
-                column(width = 3, p(win_perc), p("Win %")),
-                column(width = 3, p(current_streak), p("Current Streak")),
-                column(width = 3, p(max_streak), p("Max Streak"))
+                column(width = 2, p(as.character(played)), p("Played")),
+                column(width = 2, p(win_perc), p("Win %")),
+                column(width = 2, p(current_streak), p("Current Streak")),
+                column(width = 2, p(max_streak), p("Max Streak"))
               ), fluidRow(
-                column(width = 12, p("Guess Distribution"))),
-          renderPlot({p1}))
+                column(width = 8, p("Guess Distribution"))),
+          renderPlot({p1}, box = "off"))
           } else{
             div(style = "text-align:center; font-size: 20px",
                 fluidRow(
-                  column(width = 3, p(as.character(played)), p("Played")),
-                  column(width = 3, p(win_perc), p("Win %")),
-                  column(width = 3, p(current_streak), p("Current Streak")),
-                  column(width = 3, p(max_streak), p("Max Streak"))
+                  column(width = 2, p(as.character(played)), p("Played")),
+                  column(width = 2, p(win_perc), p("Win %")),
+                  column(width = 2, p(current_streak), p("Current Streak")),
+                  column(width = 2, p(max_streak), p("Max Streak"))
                 ))
           }
         )
