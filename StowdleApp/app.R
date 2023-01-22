@@ -84,7 +84,7 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
               ),
             shiny::actionButton("stats", "",
                                 icon = icon("signal"),
-                                style = "position: absolute; top:-35px; right: 60px; 
+                                style = "position: absolute; top:-35px; right: 55px; 
                       width: 25px;
                       height: 25px;
                       border: 1px solid black;
