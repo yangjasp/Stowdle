@@ -19,6 +19,7 @@ library(jsonlite)
 library(purrr)
 library(shinyStore)
 library(bslib)
+library(ggplot2)
 
 
 # Data
