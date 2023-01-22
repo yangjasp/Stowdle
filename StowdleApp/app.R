@@ -138,7 +138,8 @@ server <- function(input, output, session) {
   </ul>
   <li>After you have completed the Stowdle, press the share button to copy your score and share with friends! </li>
   <li>The Stowdle answer changes daily at 0:00 GMT.
-</ul>"),
+</ul>
+             Stowdle is inspired by <a href='https://worldle.teuteuf.fr/'>Worldle</a> and other variations of <a href = 'https://twitter.com/powerlanguish'> Josh Wardle</a>'s <a href='https://www.nytimes.com/games/wordle/index.html'>Wordle</a>.</div>"),
         easyClose = TRUE
       ))
     })
