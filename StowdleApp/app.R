@@ -296,7 +296,7 @@ server <- function(input, output, session) {
                                                                  n_guesses)),
                   hjust = 1.5, vjust = 0.5, size = 5,
                   family = "Helvetica Bold") +
-        scale_x_continuous(limits = c(0.5, 6.5), breaks = 1:6) +
+        scale_x_reverse(limits = c(6.5, 0.5), breaks = 6:1) +
         theme_void(base_family = "Helvetica Bold") +
         theme(axis.text.y = element_text(size = 20),
               plot.background = element_rect(fill = "#F5F5F5")) +
