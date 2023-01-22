@@ -57,6 +57,9 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
       )
     ),
 
+    # Import icon
+    shiny::tags$head(shiny::tags$link(rel = "stylesheet", href = "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css")),
+    
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(width = 9, # was 9
@@ -76,7 +79,23 @@ ui <- fluidPage(theme = bs_theme(font_scale = 1.0,
                       line-height: 15px;
                       padding-left: 5px;
                       padding-bottom: -10px"
-              )
+              ),
+            shiny::actionButton("stats", "",
+                                icon = icon("signal"),
+                                style = "position: absolute; top:-35px; right: 60px; 
+                      width: 25px;
+                      height: 25px;
+                      border: 1px solid black;
+                      color: black;
+                      background-color: white;
+                      text-align: center;
+                      font-size: 16px;
+                      padding-top: 5px;
+                      padding-right: 20px;
+                      line-height: 15px;
+                      padding-left: 5px;
+                      padding-bottom: -10px"
+            )
         ),
         
         
@@ -139,6 +158,16 @@ server <- function(input, output, session) {
     finished <- reactiveVal(FALSE)
     all_guesses <- reactiveVal(list())
     copy_output <- reactiveVal(list())
+    
+    # Pull reload
+    if(!(is.null(isolate(input$store)$StowdleStats))){
+      user_stats <- data.frame(isolate(input$store)$StowdleStats)
+    } else{
+      user_stats <- data.frame("num" = c(), 
+                               "guesses" = c(),
+                               "win" = c())
+      
+    }
     
     # Now check to see if there is a reload from the same day
     if (!(is.null(isolate(input$store)$StowdleLastDate))){
@@ -242,6 +271,75 @@ server <- function(input, output, session) {
                     label = "Street Name",
                     choices = c("", data$Name),
                     selected = NULL)
+    })
+    
+    # Add button for stats
+    observeEvent(input$stats, {
+      # Clean data for plot and create plot only if nrow user_stats > 0
+      if(nrow(user_stats) > 0){
+      user_stats_sum <- user_stats %>%
+        dplyr::group_by(guesses)%>%
+        dplyr::summarise(n_guesses = n())
+      
+      user_stats_sum <- bind_rows(user_stats_sum, dplyr::filter(
+        data.frame("guesses" = 1:6,"n_guesses" = rep(0, times = 6)),
+        !(guesses %in% user_stats_sum$guesses))) %>%
+        dplyr::arrange(guesses)
+      
+      # Make plot
+      p1 <- ggplot(data = user_stats_sum, aes(x = guesses, y = n_guesses)) +
+        geom_col(aes(x = guesses, y = n_guesses), fill = "#ffc40c", width = 0.7) +
+        geom_text(aes(x = guesses, y = n_guesses, label = ifelse(n_guesses == 0, 
+                                                                 "", 
+                                                                 n_guesses)),
+                  hjust = 1.5, vjust = 0.5, size = 5,
+                  family = "Helvetica Bold") +
+        scale_x_continuous(limits = c(0.5, 6.5), breaks = 1:6) +
+        theme_void(base_family = "Helvetica Bold") +
+        theme(axis.text.y = element_text(size = 20),
+              plot.background = element_rect(fill = "#F5F5F5")) +
+        #geom_hline(yintercept = 0, linetype = "solid", color = "black")+
+        coord_flip()
+      }else{
+        p1 <- NULL
+      }
+      
+      # Calculate played, win, current streak, max streak
+      played <- nrow(user_stats)
+      win_perc <- ifelse(nrow(user_stats) > 0,
+                         sprintf("%.0f",(sum((user_stats$win)/user_stats$played)*100)),
+        0)
+      
+      # Use rle to find winning streaks, then take current and max
+      if(nrow(user_stats) > 0){
+      rle_result <- rle(user_stats$win)
+      current_streak <- as.character(
+        ifelse(rle_result$values[played] == 1,
+               rle_result$lengths[played], 0))
+      max_streak <- ifelse(1 %in% user_stats$win,
+                           as.character(
+        max(rle_result$lengths[rle_result$values == 1])), 0)
+      } else{
+        current_streak <- 0
+        max_streak <- 0
+        
+      }
+      
+      showModal(
+        modalDialog(
+          div(style = "text-align:center; font-size: 20px",
+              fluidRow(
+                column(width = 3, p(as.character(played)), p("Played")),
+                column(width = 3, p(win_perc), p("Win %")),
+                column(width = 3, p(current_streak), p("Current Streak")),
+                column(width = 3, p(max_streak), p("Max Streak"))
+              )),
+          if(nrow(user_stats) > 0){
+            renderText({"Guess Distribution"})
+            renderPlot({p1})
+            }
+        )
+      )
     })
     
     # Function to evaluate guess, generate info
@@ -454,6 +552,17 @@ server <- function(input, output, session) {
               
             })
           })
+          
+          # If finished is now true, add row to user data
+          newrow_stowdle_num <- as.numeric(Sys.Date()) - 19143
+          newrow_guesses <- length(copy_output())
+          newrow_win <- ifelse(StreetName_reactive() == answer, 1, 0)
+          user_stats <- rbind(user_stats, c(newrow_stowdle_num,
+                                            newrow_guesses,
+                                            newrow_win))
+          names(user_stats) <- c("num", "guesses", "win")
+          updateStore(session, "StowdleStats", user_stats)
+                                   
         }
         
         
