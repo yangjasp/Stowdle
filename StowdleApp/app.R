@@ -159,14 +159,15 @@ server <- function(input, output, session) {
     finished <- reactiveVal(FALSE)
     all_guesses <- reactiveVal(list())
     copy_output <- reactiveVal(list())
+    user_stats_reactive <- reactiveValues(user_stats = NULL)
     
     # Pull reload
     if(!(is.null(isolate(input$store)$StowdleStats))){
-      user_stats <- data.frame(isolate(input$store)$StowdleStats)
+      user_stats_reactive$user_stats <- data.frame(isolate(input$store)$StowdleStats)
     } else{
-      user_stats <- data.frame("num" = c(), 
-                               "guesses" = c(),
-                               "win" = c())
+      user_stats_reactive$user_stats <- data.frame("num" = c(), 
+                                                   "guesses" = c(),
+                                                   "win" = c())
       
     }
     
@@ -276,13 +277,12 @@ server <- function(input, output, session) {
     
     # Add button for stats
     observeEvent(input$stats, {
-      user_stats <- isolate(user_stats)
       # Clean data for plot and create plot only if nrow user_stats > 0
-      if(nrow(user_stats) > 0){
-      user_stats_sum <- user_stats %>%
-        dplyr::filter(win == 1) %>%
-        dplyr::group_by(guesses)%>%
-        dplyr::summarise(n_guesses = n())
+      if(nrow(user_stats_reactive$user_stats) > 0){
+        user_stats_sum <- user_stats_reactive$user_stats %>%
+          dplyr::filter(win == 1) %>%
+          dplyr::group_by(guesses)%>%
+          dplyr::summarise(n_guesses = n())
       
       user_stats_sum <- bind_rows(user_stats_sum, dplyr::filter(
         data.frame("guesses" = 1:6,"n_guesses" = rep(0, times = 6)),
@@ -308,18 +308,18 @@ server <- function(input, output, session) {
       }
       
       # Calculate played, win, current streak, max streak
-      played <- nrow(user_stats)
-      win_perc <- ifelse(nrow(user_stats) > 0,
-                         sprintf("%.0f",(sum(user_stats$win)/played)*100),
-        0)
+      played <- nrow(user_stats_reactive$user_stats)
+      win_perc <- ifelse(nrow(user_stats_reactive$user_stats) > 0,
+                         sprintf("%.0f",(sum(user_stats_reactive$user_stats$win)/played)*100),
+                         0)
       
       # Use rle to find winning streaks, then take current and max
-      if(nrow(user_stats) > 0){
-      rle_result <- rle(user_stats$win)
+      if(nrow(user_stats_reactive$user_stats) > 0){
+      rle_result <- rle(user_stats_reactive$user_stats$win)
       current_streak <- as.character(
         ifelse(rle_result$values[played] == 1,
                rle_result$lengths[played], 0))
-      max_streak <- ifelse(1 %in% user_stats$win,
+      max_streak <- ifelse(1 %in% user_stats_reactive$user_stats$win,
                            as.character(
         max(rle_result$lengths[rle_result$values == 1])), 0)
       } else{
@@ -338,8 +338,8 @@ server <- function(input, output, session) {
                   div(class = "col-3", p(current_streak), p("Current Streak")),
                   div(class = "col-3", p(max_streak), p("Max Streak"))
                 ), fluidRow(
-                column(width = 8, p("Guess Distribution"))),
-          renderPlot({p1}, box = "off"))
+                column(width = 12, p("Guess Distribution"))),
+          renderPlot({p1}))
           } else{
             div(style = "text-align:center; font-size: 20px",
                 fluidRow(
@@ -568,12 +568,13 @@ server <- function(input, output, session) {
           newrow_stowdle_num <- as.numeric(Sys.Date()) - 19143
           newrow_guesses <- length(copy_output())
           newrow_win <- ifelse(StreetName_reactive() == answer, 1, 0)
-          user_stats <- rbind(user_stats, c(newrow_stowdle_num,
-                                            newrow_guesses,
-                                            newrow_win))
+          user_stats <- rbind(user_stats_reactive$user_stats, c(newrow_stowdle_num,
+                                                                newrow_guesses,
+                                                                newrow_win))
           names(user_stats) <- c("num", "guesses", "win")
           updateStore(session, "StowdleStats", user_stats)
-          print(user_stats)
+          user_stats_reactive$user_stats <- user_stats
+          print(user_stats_reactive$user_stats)
                                    
         }
         
