@@ -237,7 +237,7 @@ server <- function(input, output, session) {
                                    paste(lapply(text_list, paste,
                                                 collapse = ""),
                                          collapse = "\n"),
-                                   "\nhttps://yangjasp.shinyapps.io/StowdleApp/",
+                                   "\nhttps://stowdle.app",
                                    sep = "")
 
 
@@ -289,8 +289,8 @@ server <- function(input, output, session) {
       if(nrow(user_stats_reactive$user_stats) > 0){
       rle_result <- rle(user_stats_reactive$user_stats$win)
       current_streak <- as.character(
-        ifelse(rle_result$values[played] == 1,
-               rle_result$lengths[played], 0))
+        ifelse(rle_result$values[length(rle_result$values)] == 1,
+               rle_result$lengths[length(rle_result$lengths)], 0))
       max_streak <- ifelse(1 %in% user_stats_reactive$user_stats$win,
                            as.character(
         max(rle_result$lengths[rle_result$values == 1])), 0)
